@@ -3,11 +3,12 @@ module github.com/norbertcyran/gossip-test-plans
 go 1.18
 
 require (
-	github.com/norbertcyran/gossip-multicast v0.0.0-20220522115618-ed2ae29ba11e
+	github.com/norbertcyran/gossip-multicast v0.0.0-20220522142130-3c04918aebc0
 	github.com/testground/sdk-go v0.3.0
 )
 
 require (
+	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/avast/retry-go v2.6.0+incompatible // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
@@ -29,7 +30,7 @@ require (
 	go.uber.org/atomic v1.6.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )

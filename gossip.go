@@ -22,25 +22,28 @@ func gossipSimulation(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 	netclient := initCtx.NetClient
 
 	config := &network.Config{
-		Network: "default",
-		Enable:  true,
+		Network:       "default",
+		Enable:        true,
+		CallbackState: "network-configured",
 	}
 	netclient.MustConfigureNetwork(ctx, config)
 	ip := netclient.MustGetDataNetworkIP()
+	addr := &net.UDPAddr{IP: ip, Port: 3333}
 	runenv.RecordMessage("My ip is %q", ip)
 
-	st := sync.NewTopic("addrs", &net.IP{})
-	ch := make(chan *net.IP)
-	seq, _ := client.MustPublishSubscribe(ctx, st, ip, ch)
+	st := sync.NewTopic("addrs", &net.UDPAddr{})
+	ch := make(chan *net.UDPAddr)
+	client.MustPublishSubscribe(ctx, st, addr, ch)
 	neighbours := make([]string, 0, runenv.TestInstanceCount-1)
-	for i := 1; i < runenv.TestInstanceCount; i++ {
+	for i := 0; i < runenv.TestInstanceCount; i++ {
 		n := <-ch
-		if ip.Equal(*n) {
-			neighbours = append(neighbours, n.String())
+		if nAddr := n.String(); addr.String() != nAddr {
+			neighbours = append(neighbours, nAddr)
 		}
 	}
+	runenv.RecordMessage("Found %d neighbours", len(neighbours))
 
-	tConfig := &gossip.UDPTransportConfig{BindAddr: ip.String(), BindPort: 3333}
+	tConfig := &gossip.UDPTransportConfig{BindAddr: addr.IP.String(), BindPort: addr.Port}
 	t, err := gossip.NewUDPTransport(tConfig)
 	if err != nil {
 		return err
@@ -54,7 +57,7 @@ func gossipSimulation(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 			ctx:    ctx,
 			client: client,
 			runenv: runenv,
-			seq:    seq,
+			seq:    initCtx.GlobalSeq,
 		},
 		Neighbours: neighbours,
 	}
@@ -63,22 +66,24 @@ func gossipSimulation(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 		return err
 	}
 
+	runenv.RecordMessage("Waiting for other instances to be initiaized")
+	<-client.MustBarrier(ctx, "gossip-started", runenv.TestInstanceCount).C
+
 	if initCtx.GlobalSeq == 1 {
-		addr, err := net.ResolveUDPAddr("udp", "localhost:3333")
-		if err != nil {
-			panic(err)
-		}
-		conn, err := net.DialUDP("udp", nil, addr)
-		if err != nil {
-			panic(err)
-		}
-		if _, err = fmt.Fprint(conn, []byte("dGVzdAo=")); err != nil {
-			panic(err)
-		}
-
+		go func() {
+			runenv.RecordMessage("All instances initialized, sending messages")
+			conn, err := net.DialUDP("udp", nil, addr)
+			defer conn.Close()
+			if err != nil {
+				panic(err)
+			}
+			if _, err = fmt.Fprint(conn, "dGVzdAo="); err != nil {
+				panic(err)
+			}
+		}()
 	}
-
+	runenv.RecordMessage("Waiting for other instances to receive a message")
 	<-client.MustBarrier(ctx, "rcv-msg", runenv.TestInstanceCount).C
-
+	runenv.RecordMessage("Broadcast succeeded")
 	return nil
 }

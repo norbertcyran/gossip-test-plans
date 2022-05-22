@@ -21,6 +21,7 @@ func (t *TestTracer) Trace(evt gossip.EventType) {
 		t.client.MustSignalEntry(t.ctx, "rcv-msg")
 	case gossip.DuplicatedMessage:
 		t.runenv.RecordMessage("Duplicated message on instance %d", t.seq)
-
+	case gossip.ServiceStarted:
+		t.client.MustSignalEntry(t.ctx, "gossip-started")
 	}
 }
