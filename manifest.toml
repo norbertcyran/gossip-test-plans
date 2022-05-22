@@ -23,7 +23,7 @@ enabled = true
 enabled = true
 
 [[testcases]]
-name= "quickstart"
+name= "gossip"
 instances = { min = 1, max = 5, default = 1 }
 
 # Add more testcases here...

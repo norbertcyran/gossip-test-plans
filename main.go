@@ -4,13 +4,10 @@
 
 package main
 
-import "github.com/ipfs/testground/sdk/runtime"
+import (
+	"github.com/testground/sdk-go/run"
+)
 
 func main() {
-	runtime.Invoke(run)
-}
-
-func run(runenv *runtime.RunEnv) error {
-	runenv.RecordMessage("Hello, Testground!")
-	return nil
+	run.Invoke(gossipSimulation)
 }
