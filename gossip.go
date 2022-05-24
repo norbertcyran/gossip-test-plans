@@ -69,8 +69,11 @@ func gossipSimulation(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 	runenv.RecordMessage("Waiting for other instances to be initiaized")
 	<-client.MustBarrier(ctx, "gossip-started", runenv.TestInstanceCount).C
 
+	var ts time.Time
 	if initCtx.GlobalSeq == 1 {
+		ts = time.Now()
 		go func() {
+			defer run.HandlePanics()
 			runenv.RecordMessage("All instances initialized, sending messages")
 			conn, err := net.DialUDP("udp", nil, addr)
 			defer conn.Close()
@@ -84,6 +87,10 @@ func gossipSimulation(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
 	}
 	runenv.RecordMessage("Waiting for other instances to receive a message")
 	<-client.MustBarrier(ctx, "rcv-msg", runenv.TestInstanceCount).C
-	runenv.RecordMessage("Broadcast succeeded")
+	if initCtx.GlobalSeq == 1 {
+		elapsed := time.Since(ts)
+		runenv.R().RecordPoint("total-sync-time", elapsed.Seconds())
+		runenv.RecordMessage("Broadcast succeeded in %fs", elapsed.Seconds())
+	}
 	return nil
 }
